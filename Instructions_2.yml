@@ -1,0 +1,49 @@
+
+Where:
+
+- `W-A5-2` is the **drawing code** (or base name).
+- `_E`, `_F` are **revision suffixes** (single capital letters).
+- `.pdf` is the extension.
+
+The script only processes files that match this structure:  
+**`<base>_<rev>.pdf`**, where `rev` is a single capital letter (A–Z).
+
+---
+
+## 🐍 Why Python?
+
+Python is ideal because:
+
+- It's cross-platform and easy to modify.
+- It handles file operations cleanly.
+- You can easily turn it into a `.exe` file using `PyInstaller` for double-click use.
+
+---
+
+## 🚀 Prompt for Code Generation
+
+You can use the following prompt with ChatGPT or similar tools to generate the script:
+
+> Create a Python script for Windows 11 that can be run manually (e.g., by double-clicking or calling via command line). The script should:
+>
+> 1. Prompt the user to select a folder (via GUI or command line).
+> 2. Scan all the PDF files in the folder.
+> 3. Group PDFs by their base name (e.g., `EGW-A52`) and revision suffix (e.g., `_A`, `_B`, `_C`).
+> 4. For each group with multiple revisions:
+>     - Determine the latest revision by comparing the letter suffix (`_A` < `_B` < `_C`, etc.).
+>     - Keep the latest file in the original folder.
+>     - Move all earlier revisions into a subfolder called `superseded` (create it if it doesn't exist).
+> 5. Print a summary of what was moved and what was kept.
+> 6. Handle filenames like: `EGW-A52_A.pdf`, `EGW-A52_B.pdf`, etc.
+> 7. Make sure to only match files that end in `_<letter>.pdf` where letter is a single uppercase A-Z.
+> 8. Use standard Python libraries only (no external dependencies).
+>
+> Also include comments and error handling. Make sure the script can be turned into an `.exe` later with `pyinstaller`.
+
+---
+
+## 💻 Optional: Convert Script to `.exe` (Windows Executable)
+
+1. **Install PyInstaller**:
+   ```bash
+   pip install pyinstaller

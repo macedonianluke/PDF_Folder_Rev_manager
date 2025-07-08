@@ -23,15 +23,34 @@ def parse_filename(filename):
         return match.group(1), match.group(2)
     return None, None
 
+def find_or_create_superceded_folder(parent_folder):
+    """
+    Find an existing 'Superceded' folder (any case), rename if necessary,
+    or create a new one spelled exactly 'Superceded'.
+    """
+    for item in os.listdir(parent_folder):
+        item_path = os.path.join(parent_folder, item)
+        if os.path.isdir(item_path) and item.lower() == "superceded":
+            # Rename to ensure consistent casing
+            corrected_path = os.path.join(parent_folder, "Superceded")
+            if item != "Superceded":
+                os.rename(item_path, corrected_path)
+                print("Renamed existing folder to:", corrected_path)
+            return corrected_path
+
+    # Not found — create it
+    new_path = os.path.join(parent_folder, "Superceded")
+    os.makedirs(new_path)
+    print("Created new folder:", new_path)
+    return new_path
+
 def main():
     folder = select_folder()
     if not folder:
         print("No folder selected. Exiting.")
         return
 
-    superseded_dir = os.path.join(folder, "superseded")
-    if not os.path.exists(superseded_dir):
-        os.makedirs(superseded_dir)
+    superceded_dir = find_or_create_superceded_folder(folder)
 
     # Group files by base name
     pdf_files = [f for f in os.listdir(folder) if f.lower().endswith('.pdf')]
@@ -49,13 +68,12 @@ def main():
     for base, rev_files in grouped_files.items():
         # Sort by revision letter (A < B < C ...)
         rev_files.sort(key=lambda x: x[0])
-        # Keep the last one (highest rev)
         latest_rev, latest_file = rev_files[-1]
 
         for rev, file in rev_files[:-1]:
             source = os.path.join(folder, file)
-            destination = os.path.join(superseded_dir, file)
-            print("Moving old revision to superseded:", file)
+            destination = os.path.join(superceded_dir, file)
+            print("Moving old revision to Superceded:", file)
             shutil.move(source, destination)
             moved_files.append(file)
 
