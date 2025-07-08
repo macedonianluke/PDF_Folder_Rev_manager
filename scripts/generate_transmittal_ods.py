@@ -15,9 +15,16 @@ def select_folder():
     return filedialog.askdirectory(title="Select folder with PDF drawings")
 
 def parse_drawing_info(filename):
+    # First try to match pattern with underscore and revision (e.g., W-A5-2_E.pdf)
     match = re.match(r'^(.+)_([A-Z])\.pdf$', filename)
     if match:
         return match.group(1), match.group(2)
+    
+    # If no underscore, treat as first issue (revision A) - remove .pdf extension
+    if filename.lower().endswith('.pdf'):
+        base_name = filename[:-4]  # Remove .pdf extension
+        return base_name, 'A'
+    
     return None, None
 
 def get_existing_entries(doc):
@@ -27,9 +34,30 @@ def get_existing_entries(doc):
             for row in table.getElementsByType(TableRow)[1:]:  # skip header
                 cells = row.getElementsByType(TableCell)
                 if len(cells) >= 2:
-                    drawing_number = cells[0].firstChild.data if cells[0].firstChild else ""
-                    revision = cells[1].firstChild.data if cells[1].firstChild else ""
-                    entries.add((drawing_number, revision))
+                    # Extract text content safely
+                    drawing_number = ""
+                    revision = ""
+                    
+                    # Try to get drawing number
+                    if cells[0].firstChild:
+                        if hasattr(cells[0].firstChild, 'firstChild') and cells[0].firstChild.firstChild:
+                            drawing_number = str(cells[0].firstChild.firstChild)
+                        else:
+                            drawing_number = str(cells[0].firstChild)
+                    
+                    # Try to get revision
+                    if cells[1].firstChild:
+                        if hasattr(cells[1].firstChild, 'firstChild') and cells[1].firstChild.firstChild:
+                            revision = str(cells[1].firstChild.firstChild)
+                        else:
+                            revision = str(cells[1].firstChild)
+                    
+                    # Clean up the strings (remove XML tags if present)
+                    drawing_number = re.sub(r'<[^>]+>', '', drawing_number).strip()
+                    revision = re.sub(r'<[^>]+>', '', revision).strip()
+                    
+                    if drawing_number and revision:
+                        entries.add((drawing_number, revision))
     return entries
 
 def create_text_cell(value):
