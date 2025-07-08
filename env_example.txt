@@ -1,0 +1,8 @@
+# PDF Combiner Configuration
+# Copy this content to a .env file and modify as needed
+
+# Default output filename for combined PDFs
+COMBINED_PDF_OUTPUT_NAME=Combined_Output.pdf
+
+# Optional: Default folder path (if not using GUI selector)
+# DEFAULT_PDF_FOLDER=C:/Users/User/Documents/PDFs 

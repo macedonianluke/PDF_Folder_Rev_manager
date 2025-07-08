@@ -1,10 +1,17 @@
 # Core dependencies for PDF management
 # tkinter is included with Python standard library, so no pip install needed
 
+# PDF handling library
+PyPDF2==3.0.1
+
+# ODS file handling for LibreOffice spreadsheets
+odfpy==1.4.1
+
+# Environment variable management
+python-dotenv==1.0.0
+
 # Optional: Add these if you want to enhance your PDF manager
-# PyPDF2==3.0.1
 # reportlab==4.0.4
-# python-dotenv==1.0.0
 
 # Development dependencies (optional)
 # pytest==7.4.3
