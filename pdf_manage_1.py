@@ -4,6 +4,23 @@ import re
 from collections import defaultdict
 import tkinter as tk
 from tkinter import filedialog
+from pathlib import Path
+
+# Load environment variables if python-dotenv is available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+def get_env_config():
+    """Get configuration from environment variables"""
+    return {
+        'default_pdf_folder': os.getenv('DEFAULT_PDF_FOLDER', './pdfs'),
+        'superceded_folder_name': os.getenv('SUPERCEDED_FOLDER_NAME', 'Superceded'),
+        'debug': os.getenv('DEBUG', 'True').lower() == 'true',
+        'log_level': os.getenv('LOG_LEVEL', 'INFO')
+    }
 
 def select_folder():
     """Ask the user to select a folder using a GUI dialog."""
@@ -23,34 +40,41 @@ def parse_filename(filename):
         return match.group(1), match.group(2)
     return None, None
 
-def find_or_create_superceded_folder(parent_folder):
+def find_or_create_superceded_folder(parent_folder, folder_name="Superceded"):
     """
     Find an existing 'Superceded' folder (any case), rename if necessary,
     or create a new one spelled exactly 'Superceded'.
     """
     for item in os.listdir(parent_folder):
         item_path = os.path.join(parent_folder, item)
-        if os.path.isdir(item_path) and item.lower() == "superceded":
+        if os.path.isdir(item_path) and item.lower() == folder_name.lower():
             # Rename to ensure consistent casing
-            corrected_path = os.path.join(parent_folder, "Superceded")
-            if item != "Superceded":
+            corrected_path = os.path.join(parent_folder, folder_name)
+            if item != folder_name:
                 os.rename(item_path, corrected_path)
                 print("Renamed existing folder to:", corrected_path)
             return corrected_path
 
     # Not found — create it
-    new_path = os.path.join(parent_folder, "Superceded")
+    new_path = os.path.join(parent_folder, folder_name)
     os.makedirs(new_path)
     print("Created new folder:", new_path)
     return new_path
 
 def main():
+    # Load configuration
+    config = get_env_config()
+    
+    if config['debug']:
+        print(f"Debug mode: {config['debug']}")
+        print(f"Log level: {config['log_level']}")
+    
     folder = select_folder()
     if not folder:
         print("No folder selected. Exiting.")
         return
 
-    superceded_dir = find_or_create_superceded_folder(folder)
+    superceded_dir = find_or_create_superceded_folder(folder, config['superceded_folder_name'])
 
     # Group files by base name
     pdf_files = [f for f in os.listdir(folder) if f.lower().endswith('.pdf')]

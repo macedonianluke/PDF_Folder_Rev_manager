@@ -1,0 +1,12 @@
+# Core dependencies for PDF management
+# tkinter is included with Python standard library, so no pip install needed
+
+# Optional: Add these if you want to enhance your PDF manager
+# PyPDF2==3.0.1
+# reportlab==4.0.4
+# python-dotenv==1.0.0
+
+# Development dependencies (optional)
+# pytest==7.4.3
+# black==23.11.0
+# flake8==6.1.0
