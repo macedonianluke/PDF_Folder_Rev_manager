@@ -1,79 +1,66 @@
 """
-PDF Revision Manager
+PDF Revision Manager V2
 
 This script helps organize PDF files by managing different revisions of the same document.
-It identifies PDF files with revision letters (e.g., W-A5-2_A.pdf, W-A5-2_B.pdf, W-A5-2_C.pdf)
-and keeps only the latest revision while moving older revisions to a 'Superceded' folder.
+Updated to handle LF files without revision letters (e.g., LF_A0-1.pdf, LF_A1-1.pdf)
 
 Key Features:
 - Uses a GUI dialog to select the folder containing PDF files
-- Parses filenames to extract base names and revision letters
-- Groups files by their base name (e.g., 'W-A5-2')
-- Sorts revisions alphabetically (A < B < C < ...)
-- Keeps the highest revision letter in the original folder
+- Parses filenames to extract base names and revision information
+- Groups files by their base name (e.g., 'LF_A0-1')
+- Sorts revisions by filename (alphabetical)
+- Keeps the latest revision in the original folder
 - Moves all older revisions to a 'Superceded' subfolder
 - Handles case-insensitive folder naming and creates folders as needed
 - File filtering options: prefix-based or interactive selection
 - Interactive GUI to select which files to process
+- JSON configuration support
 
 Usage:
 - Run the script and select a folder when prompted
 - Choose filtering method: prefix-based or interactive selection
 - The script will automatically organize PDF revisions
-- Files not matching the expected pattern (base_revision.pdf) are skipped
+- Files not matching the expected pattern are skipped
 
-Environment Variables (optional):
-- DEFAULT_PDF_FOLDER: Default folder path
-- SUPERCEDED_FOLDER_NAME: Name for the folder containing old revisions
-- DEBUG: Enable debug output (True/False)
-- LOG_LEVEL: Logging level (INFO, DEBUG, etc.)
-- FILE_PREFIX_FILTER: Only process files starting with this prefix (e.g., "W-")
-- INTERACTIVE_MODE: Force interactive file selection (True/False)
-
-Example:
-Input folder: /documents/
-  - W-A5-2_A.pdf
-  - W-A5-2_B.pdf  
-  - W-A5-2_C.pdf
-  - DOC-001_A.pdf
-  - DOC-001_B.pdf
-
-Output:
-  /documents/
-    - W-A5-2_C.pdf (latest kept)
-    - DOC-001_B.pdf (latest kept)
-    /Superceded/
-      - W-A5-2_A.pdf (moved)
-      - W-A5-2_B.pdf (moved)
-      - DOC-001_A.pdf (moved)
+Configuration:
+- Uses JSON configuration files instead of environment variables
+- Supports multiple file patterns
+- Configurable prefix filters and interactive modes
 """
 
 import os
 import shutil
 import re
+import json
 from collections import defaultdict
 import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
 from pathlib import Path
 
-# Load environment variables if python-dotenv is available
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
-
-def get_env_config():
-    """Get configuration from environment variables"""
-    return {
-        'default_pdf_folder': os.getenv('DEFAULT_PDF_FOLDER', './pdfs'),
-        'superceded_folder_name': os.getenv('SUPERCEDED_FOLDER_NAME', 'Superceded'),
-        'debug': os.getenv('DEBUG', 'True').lower() == 'true',
-        'log_level': os.getenv('LOG_LEVEL', 'INFO'),
-        'file_prefix_filter': os.getenv('FILE_PREFIX_FILTER', '').lower(),
-        'interactive_mode': os.getenv('INTERACTIVE_MODE', 'False').lower() == 'true',
-        'file_patterns': os.getenv('FILE_PATTERNS', '').split(',') if os.getenv('FILE_PATTERNS') else []
-    }
+def load_config():
+    """Load configuration from JSON file"""
+    config_path = "pdf_manager/config.json"
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        return config
+    except Exception as e:
+        print(f"Error loading config: {e}")
+        # Return default config
+        return {
+            "file_processing": {
+                "file_prefix_filter": "LF_",
+                "interactive_mode": False,
+                "file_patterns": ["^LF_([A-Z0-9\\-]+)\\.pdf$"]
+            },
+            "folder_settings": {
+                "superceded_folder_name": "Superceded"
+            },
+            "logging": {
+                "debug_mode": True,
+                "log_level": "INFO"
+            }
+        }
 
 def select_folder():
     """Ask the user to select a folder using a GUI dialog."""
@@ -85,19 +72,22 @@ def select_folder():
 def show_filtering_info(config):
     """Show information about current filtering settings."""
     print("\n=== Filtering Configuration ===")
-    if config['file_prefix_filter']:
-        print(f"Prefix Filter: '{config['file_prefix_filter']}' (only files starting with this prefix)")
+    file_processing = config.get('file_processing', {})
+    
+    if file_processing.get('file_prefix_filter'):
+        print(f"Prefix Filter: '{file_processing['file_prefix_filter']}' (only files starting with this prefix)")
     else:
         print("Prefix Filter: None (all PDF files will be considered)")
     
-    if config['file_patterns']:
-        print(f"Custom Patterns: {len(config['file_patterns'])} pattern(s) defined")
-        for i, pattern in enumerate(config['file_patterns']):
+    patterns = file_processing.get('file_patterns', [])
+    if patterns:
+        print(f"Custom Patterns: {len(patterns)} pattern(s) defined")
+        for i, pattern in enumerate(patterns):
             print(f"  Pattern {i+1}: {pattern}")
     else:
         print("Custom Patterns: None (using default pattern)")
     
-    if config['interactive_mode']:
+    if file_processing.get('interactive_mode'):
         print("Interactive Mode: Enabled (you will select which files to process)")
     else:
         print("Interactive Mode: Disabled (automatic processing)")
@@ -106,96 +96,68 @@ def show_filtering_info(config):
 
 def parse_filename(filename, patterns=None):
     """
-    Extract base name and revision letter from filename using configurable patterns.
+    Extract base name and revision information from filename using configurable patterns.
     
-    Supported patterns:
-    - Default: 'W-A5-2_E.pdf' -> ('W-A5-2', 'E')
-    - LF pattern: 'LF_001_A.pdf' -> ('LF_001', 'A')
-    - Custom patterns can be defined in FILE_PATTERNS environment variable
+    Updated to handle files without revision letters:
+    - LF_A0-1.pdf -> ('LF_A0-1', '1') (uses filename as base, '1' as revision)
+    - LF_A1-2.pdf -> ('LF_A1-2', '2') (uses filename as base, '2' as revision)
+    - LF_A0-3_A.pdf -> ('LF_A0-3', 'A') (standard format with revision letter)
     
     Returns (base_name, revision) or (None, None) if no pattern matches.
     """
     if patterns is None:
         patterns = []
     
-    # Default pattern (original behavior)
+    # Default patterns
     default_patterns = [
         r'^(.+)_([A-Z])\.pdf$',  # Standard: base_revision.pdf
+        r'^(.+)\.pdf$',          # Simple: base.pdf (no revision letter)
     ]
     
-    # Add custom patterns from environment
+    # Add custom patterns
     all_patterns = default_patterns + patterns
     
     for pattern in all_patterns:
         try:
             match = re.match(pattern, filename, re.IGNORECASE)
             if match:
-                # Extract base name and revision
-                if len(match.groups()) >= 2:
-                    base_name = match.group(1)
-                    revision = match.group(2)
+                groups = match.groups()
+                
+                if len(groups) == 2:
+                    # Standard format: base_revision.pdf
+                    base_name = groups[0]
+                    revision = groups[1]
                     return base_name, revision
-                else:
-                    # Handle patterns with different group structures
-                    continue
+                elif len(groups) == 1:
+                    # Simple format: base.pdf (no revision letter)
+                    base_name = groups[0]
+                    # Extract revision from the base name if possible
+                    # For LF_A0-1.pdf, use '1' as revision
+                    if '_' in base_name:
+                        parts = base_name.split('_')
+                        if len(parts) >= 2:
+                            # Try to extract revision from last part
+                            last_part = parts[-1]
+                            if '-' in last_part:
+                                revision_part = last_part.split('-')[-1]
+                                if revision_part.isdigit():
+                                    revision = revision_part
+                                else:
+                                    revision = last_part
+                            else:
+                                revision = last_part
+                        else:
+                            revision = base_name
+                    else:
+                        revision = base_name
+                    
+                    return base_name, revision
+                    
         except re.error as e:
             print(f"Warning: Invalid regex pattern '{pattern}': {e}")
             continue
     
     return None, None
-
-def get_predefined_patterns():
-    """Get a dictionary of predefined patterns for common file naming conventions."""
-    return {
-        'standard': r'^(.+)_([A-Z])\.pdf$',
-        'lf_format': r'^LF_(\d+)_([A-Z])\.pdf$',
-        'doc_format': r'^DOC-(\d+)_([A-Z])\.pdf$',
-        'drawing_format': r'^DWG-(\d+)_([A-Z])\.pdf$',
-        'letter_number': r'^([A-Z]+)-(\d+)_([A-Z])\.pdf$',
-        'simple_underscore': r'^(.+)_([A-Z])\.pdf$',
-        'no_underscore': r'^(.+)([A-Z])\.pdf$',
-        'space_separated': r'^(.+)\s+([A-Z])\.pdf$',
-    }
-
-def test_pattern(pattern, test_files):
-    """Test a pattern against sample filenames and show results."""
-    print(f"\nTesting pattern: {pattern}")
-    print("-" * 50)
-    
-    for filename in test_files:
-        base, rev = parse_filename(filename, [pattern])
-        if base and rev:
-            print(f"✓ {filename} -> Base: '{base}', Revision: '{rev}'")
-        else:
-            print(f"✗ {filename} -> No match")
-    
-    print("-" * 50)
-
-def show_pattern_examples():
-    """Show examples of common file patterns and how to configure them."""
-    print("\n=== Pattern Examples ===")
-    
-    examples = [
-        ("Standard format", "W-A5-2_A.pdf", r"^(.+)_([A-Z])\.pdf$"),
-        ("LF format", "LF_001_A.pdf", r"^LF_(\d+)_([A-Z])\.pdf$"),
-        ("DOC format", "DOC-001_A.pdf", r"^DOC-(\d+)_([A-Z])\.pdf$"),
-        ("No underscore", "fileA.pdf", r"^(.+)([A-Z])\.pdf$"),
-        ("Space separated", "file A.pdf", r"^(.+)\s+([A-Z])\.pdf$"),
-    ]
-    
-    for desc, example, pattern in examples:
-        print(f"\n{desc}:")
-        print(f"  Example: {example}")
-        print(f"  Pattern: {pattern}")
-        base, rev = parse_filename(example, [pattern])
-        if base and rev:
-            print(f"  Result: Base='{base}', Revision='{rev}'")
-        else:
-            print(f"  Result: No match")
-    
-    print("\nTo use custom patterns, set FILE_PATTERNS environment variable:")
-    print("FILE_PATTERNS=^LF_(\\d+)_([A-Z])\\.pdf$")
-    print("=" * 35)
 
 def filter_files_by_prefix(files, prefix):
     """Filter files to only include those starting with the specified prefix."""
@@ -308,35 +270,27 @@ class FileSelectionDialog:
             # Insert into tree
             item = self.tree.insert("", "end", text=base_name, values=(file_list, action))
             
-            # Add child items for individual files
-            for rev, filename in rev_files:
-                status = "Keep" if filename == latest_file else "Move"
-                self.tree.insert(item, "end", text=f"  {filename}", values=("", status))
-            
-            # Check by default
+            # Select by default
             self.tree.item(item, tags=("checked",))
             self.selected_files.add(base_name)
         
-        # Bind click events for selection
+        # Bind click event
         self.tree.bind("<Button-1>", self.on_tree_click)
-    
+        
     def on_tree_click(self, event):
-        """Handle treeview click events for selection."""
-        region = self.tree.identify_region(event.x, event.y)
-        if region == "tree":  # Only handle clicks on the tree column
-            item = self.tree.identify_row(event.y)
-            if item:
-                base_name = self.tree.item(item, "text")
-                current_tags = self.tree.item(item, "tags")
-                
-                if "checked" in current_tags:
-                    self.tree.item(item, tags=())
-                    self.selected_files.discard(base_name)
-                else:
-                    self.tree.item(item, tags=("checked",))
-                    self.selected_files.add(base_name)
-                
-                self.update_summary()
+        """Handle tree item clicks."""
+        item = self.tree.selection()[0]
+        base_name = self.tree.item(item, "text")
+        
+        current_tags = self.tree.item(item, "tags")
+        if "checked" in current_tags:
+            self.tree.item(item, tags=())
+            self.selected_files.discard(base_name)
+        else:
+            self.tree.item(item, tags=("checked",))
+            self.selected_files.add(base_name)
+        
+        self.update_summary()
     
     def select_all(self):
         """Select all file groups."""
@@ -406,11 +360,12 @@ def find_or_create_superceded_folder(parent_folder, folder_name="Superceded"):
 
 def main():
     # Load configuration
-    config = get_env_config()
+    config = load_config()
     
-    if config['debug']:
-        print(f"Debug mode: {config['debug']}")
-        print(f"Log level: {config['log_level']}")
+    debug_mode = config.get('logging', {}).get('debug_mode', True)
+    if debug_mode:
+        print(f"Debug mode: {debug_mode}")
+        print(f"Log level: {config.get('logging', {}).get('log_level', 'INFO')}")
     
     # Show filtering configuration
     show_filtering_info(config)
@@ -420,7 +375,8 @@ def main():
         print("No folder selected. Exiting.")
         return
 
-    superceded_dir = find_or_create_superceded_folder(folder, config['superceded_folder_name'])
+    folder_settings = config.get('folder_settings', {})
+    superceded_dir = find_or_create_superceded_folder(folder, folder_settings.get('superceded_folder_name', 'Superceded'))
 
     # Get all PDF files
     pdf_files = [f for f in os.listdir(folder) if f.lower().endswith('.pdf')]
@@ -430,11 +386,14 @@ def main():
         return
     
     # Apply prefix filtering if specified
-    if config['file_prefix_filter']:
+    file_processing = config.get('file_processing', {})
+    prefix_filter = file_processing.get('file_prefix_filter', '')
+    
+    if prefix_filter:
         original_count = len(pdf_files)
-        pdf_files = filter_files_by_prefix(pdf_files, config['file_prefix_filter'])
+        pdf_files = filter_files_by_prefix(pdf_files, prefix_filter)
         filtered_count = len(pdf_files)
-        print(f"Prefix filter '{config['file_prefix_filter']}' applied: {filtered_count}/{original_count} files match")
+        print(f"Prefix filter '{prefix_filter}' applied: {filtered_count}/{original_count} files match")
         
         if filtered_count == 0:
             print("No files match the specified prefix filter. Exiting.")
@@ -445,8 +404,8 @@ def main():
     skipped_files = []
     
     # Get custom patterns from config
-    custom_patterns = config['file_patterns']
-    if config['debug'] and custom_patterns:
+    custom_patterns = file_processing.get('file_patterns', [])
+    if debug_mode and custom_patterns:
         print(f"Using custom patterns: {custom_patterns}")
 
     for filename in pdf_files:
@@ -458,11 +417,10 @@ def main():
 
     if skipped_files:
         print("Skipping unrecognized files:", skipped_files)
-        if config['debug']:
+        if debug_mode:
             print("Available patterns:")
-            predefined = get_predefined_patterns()
-            for name, pattern in predefined.items():
-                print(f"  {name}: {pattern}")
+            print("  simple: ^(.+)\.pdf$ (base.pdf)")
+            print("  standard: ^(.+)_([A-Z])\.pdf$ (base_revision.pdf)")
             if custom_patterns:
                 print("Custom patterns:")
                 for i, pattern in enumerate(custom_patterns):
@@ -470,17 +428,14 @@ def main():
 
     if not grouped_files:
         print("No files with valid revision patterns found. Exiting.")
-        print("Tip: Use FILE_PATTERNS environment variable to define custom patterns.")
-        
-        # Show pattern examples to help user
-        if config['debug']:
-            show_pattern_examples()
+        print("Tip: Check your file naming convention and update the configuration.")
         return
 
     # Determine which file groups to process
     selected_groups = None
     
-    if config['interactive_mode'] or (not config['file_prefix_filter'] and len(grouped_files) > 1):
+    interactive_mode = file_processing.get('interactive_mode', False)
+    if interactive_mode or (not prefix_filter and len(grouped_files) > 1):
         # Show interactive selection dialog
         root = tk.Tk()
         root.withdraw()
@@ -508,7 +463,7 @@ def main():
             print(f"Skipping unselected group: {base}")
             continue
             
-        # Sort by revision letter (A < B < C ...)
+        # Sort by revision (alphabetical)
         rev_files.sort(key=lambda x: x[0])
         latest_rev, latest_file = rev_files[-1]
 
@@ -528,4 +483,4 @@ def main():
     print(f"Total files processed: {len(kept_files) + len(moved_files)}")
 
 if __name__ == "__main__":
-    main()
+    main() 

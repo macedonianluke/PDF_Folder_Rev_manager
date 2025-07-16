@@ -1,0 +1,63 @@
+{
+  "project_name": "PDF Folder Revision Manager",
+  "version": "1.0.0",
+  "description": "A comprehensive PDF management system for organizing and processing drawing revisions",
+  
+  "default_settings": {
+    "debug_mode": true,
+    "log_level": "INFO",
+    "default_pdf_folder": "./pdfs",
+    "superceded_folder_name": "Superceded"
+  },
+  
+  "scripts": {
+    "pdf_manager": {
+      "script_path": "pdf_manager/pdf_manager.py",
+      "config_path": "pdf_manager/config.json",
+      "description": "Manages PDF file revisions and organizes them by keeping latest versions"
+    },
+    "transmittal_manager": {
+      "script_path": "transmittal_manager/transmittal_manager.py", 
+      "config_path": "transmittal_manager/config.json",
+      "description": "Updates transmittal matrices and manages drawing references"
+    },
+    "ods_generator": {
+      "script_path": "ods_generator/ods_generator.py",
+      "config_path": "ods_generator/config.json", 
+      "description": "Generates ODS files and transmittal documents"
+    },
+    "pdf_combiner": {
+      "script_path": "pdf_combiner/pdf_combiner.py",
+      "config_path": "pdf_combiner/config.json",
+      "description": "Combines multiple PDF files into single documents"
+    }
+  },
+  
+  "file_patterns": {
+    "lf_format": {
+      "pattern": "^LF_([A-Z0-9\\-]+)_([A-Z])\\.pdf$",
+      "description": "LF_A0-3_A.pdf format",
+      "example": "LF_A0-3_A.pdf → Base: 'A0-3', Revision: 'A'"
+    },
+    "standard_format": {
+      "pattern": "^(.+)_([A-Z])\\.pdf$", 
+      "description": "Standard underscore format",
+      "example": "DOC-001_A.pdf → Base: 'DOC-001', Revision: 'A'"
+    },
+    "doc_format": {
+      "pattern": "^DOC-(\\d+)_([A-Z])\\.pdf$",
+      "description": "DOC numbered format",
+      "example": "DOC-001_A.pdf → Base: '001', Revision: 'A'"
+    }
+  },
+  
+  "supported_extensions": [".pdf", ".dwg", ".dxf", ".ods"],
+  
+  "logging": {
+    "file_logging": true,
+    "console_logging": true,
+    "log_file": "logs/app.log",
+    "max_file_size": "10MB",
+    "backup_count": 5
+  }
+} 

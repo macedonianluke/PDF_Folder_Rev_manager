@@ -1,0 +1,58 @@
+{
+  "script_name": "PDF Combiner",
+  "version": "1.0.0",
+  "description": "Combines multiple PDF files into single documents",
+  
+  "output_settings": {
+    "default_output_name": "Combined_Output.pdf",
+    "open_on_completion": false,
+    "ask_before_opening": true,
+    "auto_naming": {
+      "enabled": true,
+      "structure": "Ample_{project_name}_{date}",
+      "date_format": "%Y%m%d",
+      "folder_pattern": "^(Ample_)?([^_]+)_([^_]+)$",
+      "default_project_name": "Project",
+      "default_issue_type": "Issue",
+      "extract_from_path": true,
+      "path_patterns": [
+        {
+          "pattern": ".*[\\\\/]02_Specific_Projects[\\\\/]([^\\\\/]+)[\\\\/]Drawings[\\\\/]PDF$",
+          "extract": "project_name",
+          "description": "Extract project name from 02_Specific_Projects folder"
+        },
+        {
+          "pattern": ".*[\\\\/]([^\\\\/]+)[\\\\/]Drawings[\\\\/]PDF$",
+          "extract": "project_name",
+          "description": "Extract project name from path ending with Drawings/PDF"
+        }
+      ],
+      "address_format": "{street_number} {street_name}, {suburb} NSW, {postcode}"
+    }
+  },
+  
+  "file_processing": {
+    "supported_extensions": [".pdf"],
+    "sort_by_name": true,
+    "exclude_patterns": []
+  },
+  
+  "gui_settings": {
+    "window_title": "PDF Combiner Tool",
+    "show_progress": true,
+    "show_file_list": true
+  },
+  
+  "logging": {
+    "debug_mode": false,
+    "log_level": "INFO",
+    "log_to_file": false,
+    "log_file": "pdf_combiner.log"
+  },
+  
+  "advanced_settings": {
+    "create_backup": false,
+    "backup_folder": "backups",
+    "overwrite_existing": true
+  }
+} 

@@ -1,8 +1,64 @@
-# PDF Combiner Configuration
-# Copy this content to a .env file and modify as needed
+# PDF Revision Manager Environment Configuration
+# Copy this file to .env and modify as needed
 
-# Default output filename for combined PDFs
-COMBINED_PDF_OUTPUT_NAME=Combined_Output.pdf
+# Default folder path (optional)
+DEFAULT_PDF_FOLDER=./pdfs
 
-# Optional: Default folder path (if not using GUI selector)
-# DEFAULT_PDF_FOLDER=C:/Users/User/Documents/PDFs 
+# Name for the folder containing old revisions
+SUPERCEDED_FOLDER_NAME=Superceded
+
+# Debug mode (True/False)
+DEBUG=True
+
+# Log level (INFO, DEBUG, WARNING, ERROR)
+LOG_LEVEL=INFO
+
+# File filtering options:
+
+# Only process files starting with this prefix (e.g., "W-" for W-A5-2_A.pdf)
+# Leave empty to process all PDF files
+FILE_PREFIX_FILTER=
+
+# Force interactive file selection mode (True/False)
+# If True, always show file selection dialog
+# If False, only show dialog when multiple file groups found and no prefix filter
+INTERACTIVE_MODE=False
+
+# Custom file pattern recognition (comma-separated regex patterns)
+# These patterns define how to extract base name and revision from filenames
+# Format: base_name_group,revision_group (use regex groups)
+FILE_PATTERNS=
+
+# Examples:
+# FILE_PREFIX_FILTER=W-          # Only process files starting with "W-"
+# FILE_PREFIX_FILTER=DOC-        # Only process files starting with "DOC-"
+# INTERACTIVE_MODE=True          # Always show file selection dialog
+
+# Real-world Pattern Examples:
+
+# Engineering Drawing Formats:
+# FILE_PATTERNS=^W-(\d+)-(\d+)_([A-Z])\.pdf$              # W-A5-2_A.pdf -> (W-A5-2, A)
+# FILE_PATTERNS=^LF_(\d+)_([A-Z])\.pdf$                    # LF_001_A.pdf -> (LF_001, A)
+# FILE_PATTERNS=^DOC-(\d+)_([A-Z])\.pdf$                   # DOC-001_A.pdf -> (DOC-001, A)
+# FILE_PATTERNS=^DWG-(\d+)_([A-Z])\.pdf$                   # DWG-001_A.pdf -> (DWG-001, A)
+# FILE_PATTERNS=^P-(\d+)_([A-Z])\.pdf$                     # P-001_A.pdf -> (P-001, A)
+
+# Construction/Architecture Formats:
+# FILE_PATTERNS=^A-(\d+)_([A-Z])\.pdf$                     # A-001_A.pdf -> (A-001, A)
+# FILE_PATTERNS=^S-(\d+)_([A-Z])\.pdf$                     # S-001_A.pdf -> (S-001, A)
+# FILE_PATTERNS=^M-(\d+)_([A-Z])\.pdf$                     # M-001_A.pdf -> (M-001, A)
+# FILE_PATTERNS=^E-(\d+)_([A-Z])\.pdf$                     # E-001_A.pdf -> (E-001, A)
+
+# General Formats:
+# FILE_PATTERNS=^(.+)_([A-Z])\.pdf$                        # Standard: any_name_A.pdf
+# FILE_PATTERNS=^(.+)([A-Z])\.pdf$                         # No underscore: fileA.pdf
+# FILE_PATTERNS=^(.+)\s+([A-Z])\.pdf$                      # Space separated: file A.pdf
+# FILE_PATTERNS=^(.+)-([A-Z])\.pdf$                        # Dash separated: file-A.pdf
+
+# Multiple patterns for mixed file types (comma-separated):
+# FILE_PATTERNS=^W-(\d+)-(\d+)_([A-Z])\.pdf$,^LF_(\d+)_([A-Z])\.pdf$,^DOC-(\d+)_([A-Z])\.pdf$
+
+# Common combinations:
+# Engineering drawings: W-, LF_, DOC-, DWG-, P-
+# Architecture: A-, S-, M-, E-
+# Mixed formats: Standard + specific prefixes 

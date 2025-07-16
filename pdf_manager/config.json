@@ -1,0 +1,82 @@
+{
+  "script_name": "PDF Manager",
+  "version": "1.0.0",
+  "description": "Manages PDF file revisions and organizes them by keeping latest versions",
+  
+  "file_processing": {
+    "file_prefix_filter": "LF_",
+    "interactive_mode": false,
+    "supported_extensions": [".pdf"],
+    "file_patterns": [
+      "^LF_([A-Z0-9\\-]+)_([A-Z])\\.pdf$",
+      "^(.+)_([A-Z])\\.pdf$"
+    ]
+  },
+  
+  "folder_settings": {
+    "default_pdf_folder": "./pdfs",
+    "superceded_folder_name": "Superceded",
+    "create_backup": true,
+    "backup_folder": "backups"
+  },
+  
+  "gui_settings": {
+    "window_title": "PDF Revision Manager",
+    "window_size": "800x600",
+    "show_file_dialog": true,
+    "show_progress": true
+  },
+  
+  "logging": {
+    "debug_mode": true,
+    "log_level": "INFO",
+    "log_to_file": true,
+    "log_file": "pdf_manager.log"
+  },
+  
+  "file_patterns_detailed": {
+    "lf_format": {
+      "name": "LF Format",
+      "pattern": "^LF_([A-Z0-9\\-]+)\\.pdf$",
+      "description": "LF_A0-1.pdf format (no revision letter)",
+      "examples": [
+        "LF_A0-1.pdf",
+        "LF_A1-1.pdf", 
+        "LF_A1-2.pdf"
+      ]
+    },
+    "lf_format_with_revision": {
+      "name": "LF Format with Revision",
+      "pattern": "^LF_([A-Z0-9\\-]+)_([A-Z])\\.pdf$",
+      "description": "LF_A0-3_A.pdf format (with revision letter)",
+      "examples": [
+        "LF_A0-3_A.pdf",
+        "LF_B1-5_C.pdf", 
+        "LF_C2-8_A.pdf"
+      ]
+    },
+    "standard_format": {
+      "name": "Standard Format", 
+      "pattern": "^(.+)_([A-Z])\\.pdf$",
+      "description": "Standard underscore format",
+      "examples": [
+        "DOC-001_A.pdf",
+        "W-A5-2_B.pdf",
+        "Drawing_001_C.pdf"
+      ]
+    }
+  },
+  
+  "revision_sorting": {
+    "method": "alphabetical",
+    "custom_order": ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"],
+    "case_sensitive": false
+  },
+  
+  "safety_settings": {
+    "confirm_deletions": true,
+    "max_files_per_operation": 1000,
+    "skip_readonly_files": true,
+    "preserve_timestamps": false
+  }
+} 
